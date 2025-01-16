@@ -1,0 +1,311 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId     String   @id @default(uuid()) @map("user_id") @db.VarChar(36)
+  email      String   @unique
+  password   String   @db.VarChar(100)
+  fullName   String   @map("full_name") @db.VarChar(100)
+  phoneNo    String   @map("phone_no") @db.VarChar(10)
+  role       String   @default("user") @db.VarChar(100)
+  avatar     String   @db.VarChar(100)
+  address    String   @db.VarChar(100)
+  department String   @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at")
+  isDeleted  Boolean  @default(false) @map("is_deleted")
+
+  groups           GroupMember[]
+  projects         Project[]
+  messages         Message[]
+  reactions        Reaction[]
+  notifications    Notification[]
+  tasksAssigned    Task[]            @relation("assignedTasks")
+  tasksCreated     Task[]            @relation("createdTasks")
+  taskActivityLogs TaskActivityLog[]
+  taskStatusLogs   TaskStatusLog[]
+  permissions      Permission[]
+  comments         Comment[]
+  attachments      Attachment[]
+
+  @@map("users")
+}
+
+model Group {
+  groupId     String   @id @default(uuid()) @map("group_id") @db.VarChar(36)
+  groupName   String   @map("group_name") @db.VarChar(100)
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  isDirect    Boolean  @default(false) @map("is_direct")
+
+  members GroupMember[]
+  tasks   Task[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  groupMemberId String   @id @default(uuid()) @map("group_member_id") @db.VarChar(36)
+  createdAt     DateTime @default(now()) @map("created_at")
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+
+  group   Group  @relation(fields: [groupId], references: [groupId])
+  groupId String @db.VarChar(36)
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  @@map("group_members")
+}
+
+model Project {
+  projectId   String   @id @default(uuid()) @map("project_id") @db.VarChar(36)
+  projectName String   @map("project_name") @db.VarChar(100)
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  tasks Task[]
+
+  @@map("projects")
+}
+
+model Message {
+  messageId String   @id @default(uuid()) @map("message_id") @db.VarChar(36)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  isRead    Boolean  @default(false) @map("is_read")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  reactions Reaction[]
+
+  @@map("messages")
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+model Reaction {
+  reactionId String       @id @default(uuid()) @map("reaction_id") @db.VarChar(36)
+  type       ReactionType
+  createdAt  DateTime     @default(now()) @map("created_at")
+  isDeleted  Boolean      @default(false) @map("is_deleted")
+  updatedAt  DateTime     @default(now()) @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  message   Message @relation(fields: [messageId], references: [messageId])
+  messageId String  @map("message_id") @db.VarChar(36)
+
+  @@map("reactions")
+}
+
+enum RelatedType {
+  MESSAGE
+  REACTION
+  PROJECT
+  GROUP
+}
+
+model Notification {
+  notificationId String   @id @default(uuid()) @map("notification_id") @db.VarChar(36)
+  content        String   @db.Text
+  link           String   @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at")
+  isDeleted      Boolean  @default(false) @map("is_deleted")
+  isRead         Boolean  @default(false) @map("is_read")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  relatedId   String      @map("related_id") @db.VarChar(36)
+  relatedType RelatedType @map("related_type")
+
+  @@map("notifications")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Task {
+  taskId      String     @id @default(uuid()) @map("task_id") @db.VarChar(36)
+  taskName    String     @map("task_name") @db.VarChar(100)
+  description String     @db.Text
+  deadline    DateTime   @map("deadline")
+  status      TaskStatus
+  priority    Priority
+  parentTask  String?    @map("parent_task") @db.VarChar(36)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  isDeleted   Boolean    @default(false) @map("is_deleted")
+  updatedAt   DateTime   @default(now()) @map("updated_at")
+
+  assignedTo   User   @relation("assignedTasks", fields: [assignedToId], references: [userId])
+  assignedToId String @map("assigned_to_id") @db.VarChar(36)
+
+  createdBy   User   @relation("createdTasks", fields: [createdById], references: [userId])
+  createdById String @map("created_by_id") @db.VarChar(36)
+
+  group   Group  @relation(fields: [groupId], references: [groupId])
+  groupId String @map("group_id") @db.VarChar(36)
+
+  project   Project @relation(fields: [projectId], references: [projectId])
+  projectId String  @map("project_id") @db.VarChar(36)
+
+  taskActivityLogs TaskActivityLog[]
+  taskStatusLogs   TaskStatusLog[]
+  comments         Comment[]
+
+  @@map("tasks")
+}
+
+enum TaskActivityType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model TaskActivityLog {
+  taskActivityLogId String           @id @default(uuid()) @map("task_activity_log_id") @db.VarChar(36)
+  action            TaskActivityType
+  detail            String           @db.Text
+  createdAt         DateTime         @default(now()) @map("created_at")
+  isDeleted         Boolean          @default(false) @map("is_deleted")
+
+  task   Task   @relation(fields: [taskId], references: [taskId])
+  taskId String @map("task_id") @db.VarChar(36)
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  @@map("task_activity_logs")
+}
+
+model TaskStatusLog {
+  taskStatusLogId String     @id @default(uuid()) @map("task_status_log_id") @db.VarChar(36)
+  oldStatus       TaskStatus @map("old_status")
+  newStatus       TaskStatus @map("new_status")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  isDeleted       Boolean    @default(false) @map("is_deleted")
+
+  task   Task   @relation(fields: [taskId], references: [taskId])
+  taskId String @map("task_id") @db.VarChar(36)
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  @@map("task_status_logs")
+}
+
+enum TypePermission {
+  TASK
+  PROJECT
+}
+
+model Permission {
+  permissionId String   @id @default(uuid()) @map("permission_id") @db.VarChar(36)
+  createdAt    DateTime @default(now()) @map("created_at")
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  targerId   String @map("targer_id") @db.VarChar(36)
+  targetType String @map("target_type")
+
+  role   Role   @relation(fields: [roleId], references: [roleId])
+  roleId String @map("role_id") @db.VarChar(36)
+
+  @@map("permissions")
+}
+
+enum TypeRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model Role {
+  roleId      String   @id @default(uuid()) @map("role_id") @db.VarChar(36)
+  roleName    TypeRole
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+
+  permissions Permission[]
+
+  @@map("roles")
+}
+
+model Comment {
+  commentId String   @id @default(uuid()) @map("comment_id") @db.VarChar(36)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  task   Task   @relation(fields: [taskId], references: [taskId])
+  taskId String @map("task_id") @db.VarChar(36)
+
+  @@map("comments")
+}
+
+enum TypeAttachment {
+  TASK
+  COMMENT
+  MESSAGE
+}
+
+model Attachment {
+  attachmentId String         @id @default(uuid()) @map("attachment_id") @db.VarChar(36)
+  url          String         @db.VarChar(100)
+  type         TypeAttachment
+  createdAt    DateTime       @default(now()) @map("created_at")
+  isDeleted    Boolean        @default(false) @map("is_deleted")
+
+  relatedId   String      @map("related_id") @db.VarChar(36)
+  relatedType RelatedType @map("related_type")
+
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String @map("user_id") @db.VarChar(36)
+
+  @@map("attachments")
+}
