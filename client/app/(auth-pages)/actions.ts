@@ -35,23 +35,23 @@ export const signUpAction = async (formData: FormData) => {
   }
 
   // Nếu đăng ký thành công, thêm dữ liệu vào bảng `users`
-  if (user) {
-    const { error: profileError } = await supabase.from("users").insert({
-      id: user.user?.id, // ID người dùng từ `auth.users`
-      // full_name: fullName,
-      email: user.user?.email,
-      created_at: new Date().toISOString(),
-    });
+// if (user) {
+//   const { error: profileError } = await supabase.from("profiles").insert({
+//     id: user.user?.id, // ID người dùng từ `auth.users`
+//     email: user.user?.email,
+//     created_at: new Date().toISOString(),
+//   });
 
-    if (profileError) {
-      console.error("Error inserting into users table:", profileError.message);
-      return encodedRedirect(
-        "error",
-        "/sign-up",
-        "Failed to create user profile",
-      );
-    }
-  }
+//   if (profileError) {
+//     console.error("Error inserting into users table:", profileError.message);
+//     return encodedRedirect(
+//       "error",
+//       "/sign-up",
+//       "Failed to create user profile"
+//     );
+//   }
+// }
+
 
   // Trả về thông báo thành công
   return encodedRedirect(
