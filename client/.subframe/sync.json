@@ -1,0 +1,5 @@
+{
+  "directory": "./src\\ui",
+  "importAlias": "@/ui/*",
+  "projectId": "b61c5bdb8cf4"
+}
